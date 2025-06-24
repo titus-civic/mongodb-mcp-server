@@ -31,7 +31,7 @@ try {
 
     const transport = createEJsonTransport();
 
-    process.on("SIGINT", () => {
+    const shutdown = () => {
         logger.info(LogId.serverCloseRequested, "server", `Server close requested`);
 
         server
@@ -45,7 +45,11 @@ try {
                 logger.error(LogId.serverCloseFailure, "server", `Error closing server: ${error.message}`);
                 process.exit(1);
             });
-    });
+    };
+
+    process.once("SIGINT", shutdown);
+    process.once("SIGTERM", shutdown);
+    process.once("SIGQUIT", shutdown);
 
     await server.connect(transport);
 } catch (error: unknown) {
