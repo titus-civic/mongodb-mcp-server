@@ -24,6 +24,8 @@ A Model Context Protocol server for interacting with MongoDB Databases and Mongo
     - [MCP Client Configuration](#mcp-configuration-file-examples)
 - [🤝 Contributing](#contributing)
 
+<a name="getting-started"></a>
+
 ## Prerequisites
 
 - Node.js (v20.10.0 or later)
@@ -46,7 +48,7 @@ Most MCP clients require a configuration file to be created or modified to add t
 
 Note: The configuration file syntax can be different across clients. Please refer to the following links for the latest expected syntax:
 
-- **Windsurf**:https://docs.windsurf.com/windsurf/mcp
+- **Windsurf**: https://docs.windsurf.com/windsurf/mcp
 - **VSCode**: https://code.visualstudio.com/docs/copilot/chat/mcp-servers
 - **Claude Desktop**: https://modelcontextprotocol.io/quickstart/user
 - **Cursor**: https://docs.cursor.com/context/model-context-protocol
@@ -487,6 +489,6 @@ npx -y mongodb-mcp-server --apiClientId="your-atlas-service-accounts-client-id" 
 }
 ```
 
-## 🤝 Contributing
+## 🤝Contributing
 
 Interested in contributing? Great! Please check our [Contributing Guide](CONTRIBUTING.md) for guidelines on code contributions, standards, adding new tools, and troubleshooting information.
