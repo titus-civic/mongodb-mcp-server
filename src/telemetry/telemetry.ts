@@ -7,6 +7,7 @@ import { MACHINE_METADATA } from "./constants.js";
 import { EventCache } from "./eventCache.js";
 import nodeMachineId from "node-machine-id";
 import { getDeviceId } from "@mongodb-js/device-id";
+import fs from "fs/promises";
 
 type EventResult = {
     success: boolean;
@@ -17,8 +18,8 @@ export const DEVICE_ID_TIMEOUT = 3000;
 
 export class Telemetry {
     private isBufferingEvents: boolean = true;
-    /** Resolves when the device ID is retrieved or timeout occurs */
-    public deviceIdPromise: Promise<string> | undefined;
+    /** Resolves when the setup is complete or a timeout occurs */
+    public setupPromise: Promise<[string, boolean]> | undefined;
     private deviceIdAbortController = new AbortController();
     private eventCache: EventCache;
     private getRawMachineId: () => Promise<string>;
@@ -48,33 +49,62 @@ export class Telemetry {
     ): Telemetry {
         const instance = new Telemetry(session, userConfig, commonProperties, { eventCache, getRawMachineId });
 
-        void instance.start();
+        void instance.setup();
         return instance;
     }
 
-    private async start(): Promise<void> {
+    private async isContainerEnv(): Promise<boolean> {
+        if (process.platform !== "linux") {
+            return false; // we only support linux containers for now
+        }
+
+        if (process.env.container) {
+            return true;
+        }
+
+        const exists = await Promise.all(
+            ["/.dockerenv", "/run/.containerenv", "/var/run/.containerenv"].map(async (file) => {
+                try {
+                    await fs.access(file);
+                    return true;
+                } catch {
+                    return false;
+                }
+            })
+        );
+
+        return exists.includes(true);
+    }
+
+    private async setup(): Promise<void> {
         if (!this.isTelemetryEnabled()) {
             return;
         }
-        this.deviceIdPromise = getDeviceId({
-            getMachineId: () => this.getRawMachineId(),
-            onError: (reason, error) => {
-                switch (reason) {
-                    case "resolutionError":
-                        logger.debug(LogId.telemetryDeviceIdFailure, "telemetry", String(error));
-                        break;
-                    case "timeout":
-                        logger.debug(LogId.telemetryDeviceIdTimeout, "telemetry", "Device ID retrieval timed out");
-                        break;
-                    case "abort":
-                        // No need to log in the case of aborts
-                        break;
-                }
-            },
-            abortSignal: this.deviceIdAbortController.signal,
-        });
+        this.setupPromise = Promise.all([
+            getDeviceId({
+                getMachineId: () => this.getRawMachineId(),
+                onError: (reason, error) => {
+                    switch (reason) {
+                        case "resolutionError":
+                            logger.debug(LogId.telemetryDeviceIdFailure, "telemetry", String(error));
+                            break;
+                        case "timeout":
+                            logger.debug(LogId.telemetryDeviceIdTimeout, "telemetry", "Device ID retrieval timed out");
+                            break;
+                        case "abort":
+                            // No need to log in the case of aborts
+                            break;
+                    }
+                },
+                abortSignal: this.deviceIdAbortController.signal,
+            }),
+            this.isContainerEnv(),
+        ]);
 
-        this.commonProperties.device_id = await this.deviceIdPromise;
+        const [deviceId, containerEnv] = await this.setupPromise;
+
+        this.commonProperties.device_id = deviceId;
+        this.commonProperties.is_container_env = containerEnv;
 
         this.isBufferingEvents = false;
     }
