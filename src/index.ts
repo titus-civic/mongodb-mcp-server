@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import logger, { LogId } from "./logger.js";
+import logger, { LogId } from "./common/logger.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { config } from "./config.js";
-import { Session } from "./session.js";
+import { config } from "./common/config.js";
+import { Session } from "./common/session.js";
 import { Server } from "./server.js";
-import { packageInfo } from "./helpers/packageInfo.js";
+import { packageInfo } from "./common/packageInfo.js";
 import { Telemetry } from "./telemetry/telemetry.js";
 import { createEJsonTransport } from "./helpers/EJsonTransport.js";
 
