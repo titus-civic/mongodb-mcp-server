@@ -1,15 +1,16 @@
 import { z, type ZodRawShape, type ZodNever, AnyZodObject } from "zod";
-import type { McpServer, RegisteredTool, ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { RegisteredTool, ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { Session } from "../session.js";
 import logger, { LogId } from "../logger.js";
 import { Telemetry } from "../telemetry/telemetry.js";
 import { type ToolEvent } from "../telemetry/types.js";
 import { UserConfig } from "../config.js";
+import { Server } from "../server.js";
 
 export type ToolArgs<Args extends ZodRawShape> = z.objectOutputType<Args, ZodNever>;
 
-export type OperationType = "metadata" | "read" | "create" | "delete" | "update";
+export type OperationType = "metadata" | "read" | "create" | "delete" | "update" | "connect";
 export type ToolCategory = "mongodb" | "atlas";
 export type TelemetryToolMetadata = {
     projectId?: string;
@@ -17,11 +18,11 @@ export type TelemetryToolMetadata = {
 };
 
 export abstract class ToolBase {
-    protected abstract name: string;
+    public abstract name: string;
 
-    protected abstract category: ToolCategory;
+    public abstract category: ToolCategory;
 
-    protected abstract operationType: OperationType;
+    public abstract operationType: OperationType;
 
     protected abstract description: string;
 
@@ -36,6 +37,7 @@ export abstract class ToolBase {
         switch (this.operationType) {
             case "read":
             case "metadata":
+            case "connect":
                 annotations.readOnlyHint = true;
                 annotations.destructiveHint = false;
                 break;
@@ -63,9 +65,9 @@ export abstract class ToolBase {
         protected readonly telemetry: Telemetry
     ) {}
 
-    public register(server: McpServer): void {
+    public register(server: Server): boolean {
         if (!this.verifyAllowed()) {
-            return;
+            return false;
         }
 
         const callback: ToolCallback<typeof this.argsShape> = async (...args) => {
@@ -84,14 +86,15 @@ export abstract class ToolBase {
             }
         };
 
-        server.tool(this.name, this.description, this.argsShape, this.annotations, callback);
+        server.mcpServer.tool(this.name, this.description, this.argsShape, this.annotations, callback);
 
         // This is very similar to RegisteredTool.update, but without the bugs around the name.
         // In the upstream update method, the name is captured in the closure and not updated when
         // the tool name changes. This means that you only get one name update before things end up
         // in a broken state.
+        // See https://github.com/modelcontextprotocol/typescript-sdk/issues/414 for more details.
         this.update = (updates: { name?: string; description?: string; inputSchema?: AnyZodObject }) => {
-            const tools = server["_registeredTools"] as { [toolName: string]: RegisteredTool };
+            const tools = server.mcpServer["_registeredTools"] as { [toolName: string]: RegisteredTool };
             const existingTool = tools[this.name];
 
             if (!existingTool) {
@@ -118,8 +121,10 @@ export abstract class ToolBase {
                 existingTool.inputSchema = updates.inputSchema;
             }
 
-            server.sendToolListChanged();
+            server.mcpServer.sendToolListChanged();
         };
+
+        return true;
     }
 
     protected update?: (updates: { name?: string; description?: string; inputSchema?: AnyZodObject }) => void;
