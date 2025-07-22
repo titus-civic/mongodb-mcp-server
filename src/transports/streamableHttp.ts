@@ -14,7 +14,7 @@ const JSON_RPC_ERROR_CODE_SESSION_ID_INVALID = -32002;
 const JSON_RPC_ERROR_CODE_SESSION_NOT_FOUND = -32003;
 const JSON_RPC_ERROR_CODE_INVALID_REQUEST = -32004;
 
-function promiseHandler(
+function withErrorHandling(
     fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<void>
 ) {
     return (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -50,7 +50,7 @@ export class StreamableHttpRunner extends TransportRunnerBase {
         app.enable("trust proxy"); // needed for reverse proxy support
         app.use(express.json());
 
-        const handleRequest = async (req: express.Request, res: express.Response) => {
+        const handleSessionRequest = async (req: express.Request, res: express.Response) => {
             const sessionId = req.headers["mcp-session-id"];
             if (!sessionId) {
                 res.status(400).json({
@@ -88,10 +88,10 @@ export class StreamableHttpRunner extends TransportRunnerBase {
 
         app.post(
             "/mcp",
-            promiseHandler(async (req: express.Request, res: express.Response) => {
+            withErrorHandling(async (req: express.Request, res: express.Response) => {
                 const sessionId = req.headers["mcp-session-id"];
                 if (sessionId) {
-                    await handleRequest(req, res);
+                    await handleSessionRequest(req, res);
                     return;
                 }
 
@@ -141,8 +141,8 @@ export class StreamableHttpRunner extends TransportRunnerBase {
             })
         );
 
-        app.get("/mcp", promiseHandler(handleRequest));
-        app.delete("/mcp", promiseHandler(handleRequest));
+        app.get("/mcp", withErrorHandling(handleSessionRequest));
+        app.delete("/mcp", withErrorHandling(handleSessionRequest));
 
         this.httpServer = await new Promise<http.Server>((resolve, reject) => {
             const result = app.listen(this.userConfig.httpPort, this.userConfig.httpHost, (err?: Error) => {

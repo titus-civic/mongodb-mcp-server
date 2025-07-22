@@ -31,15 +31,14 @@ async function main() {
     try {
         await transportRunner.start();
     } catch (error: unknown) {
-        logger.emergency(LogId.serverStartFailure, "server", `Fatal error running server: ${error as string}`);
+        logger.info(LogId.serverCloseRequested, "server", "Closing server");
         try {
             await transportRunner.close();
-            logger.error(LogId.serverClosed, "server", "Server closed");
+            logger.info(LogId.serverClosed, "server", "Server closed");
         } catch (error: unknown) {
             logger.error(LogId.serverCloseFailure, "server", `Error closing server: ${error as string}`);
-        } finally {
-            process.exit(1);
         }
+        throw error;
     }
 }
 
