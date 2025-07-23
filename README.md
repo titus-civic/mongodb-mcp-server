@@ -230,6 +230,18 @@ With Atlas API credentials:
 
 #### Option 6: Running as an HTTP Server
 
+> **⚠️ Security Notice:** This server now supports Streamable HTTP transport for remote connections. **HTTP transport is NOT recommended for production use without implementing proper authentication and security measures.**
+
+**Suggested Security Measures Examples:**
+
+- Implement authentication (e.g., API gateway, reverse proxy)
+- Use HTTPS/TLS encryption
+- Deploy behind a firewall or in private networks
+- Implement rate limiting
+- Never expose directly to the internet
+
+For more details, see [MCP Security Best Practices](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).
+
 You can run the MongoDB MCP Server as an HTTP server instead of the default stdio transport. This is useful if you want to interact with the server over HTTP, for example from a web client or to expose the server on a specific port.
 
 To start the server with HTTP transport, use the `--transport http` option:
