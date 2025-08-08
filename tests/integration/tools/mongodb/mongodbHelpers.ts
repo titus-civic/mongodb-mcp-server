@@ -32,6 +32,11 @@ const testDataPaths = [
         collection: "shows",
         path: path.join(testDataDumpPath, "mflix.shows.json"),
     },
+    {
+        db: "support",
+        collection: "tickets",
+        path: path.join(testDataDumpPath, "support.tickets.json"),
+    },
 ];
 
 interface MongoDBIntegrationTest {
@@ -198,7 +203,7 @@ export function validateAutoConnectBehavior(
 
 export function prepareTestData(integration: MongoDBIntegrationTest): {
     populateTestData: (this: void) => Promise<void>;
-    cleanupTestDatabases: (this: void, integration: MongoDBIntegrationTest) => Promise<void>;
+    cleanupTestDatabases: (this: void) => Promise<void>;
 } {
     const NON_TEST_DBS = ["admin", "config", "local"];
     const testData: {
@@ -224,7 +229,7 @@ export function prepareTestData(integration: MongoDBIntegrationTest): {
                 await client.db(db).collection(collection).insertMany(data);
             }
         },
-        async cleanupTestDatabases(this: void, integration: MongoDBIntegrationTest): Promise<void> {
+        async cleanupTestDatabases(this: void): Promise<void> {
             const client = integration.mongoClient();
             const admin = client.db().admin();
             const databases = await admin.listDatabases();
@@ -235,4 +240,15 @@ export function prepareTestData(integration: MongoDBIntegrationTest): {
             );
         },
     };
+}
+
+export function getDocsFromUntrustedContent(content: string): unknown[] {
+    const lines = content.split("\n");
+    const startIdx = lines.findIndex((line) => line.trim().startsWith("["));
+    const endIdx = lines.length - 1 - [...lines].reverse().findIndex((line) => line.trim().endsWith("]"));
+    if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
+        throw new Error("Could not find JSON array in content");
+    }
+    const json = lines.slice(startIdx, endIdx + 1).join("\n");
+    return JSON.parse(json) as unknown[];
 }
