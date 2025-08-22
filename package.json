@@ -48,6 +48,8 @@
     "check:lint": "eslint .",
     "check:format": "prettier -c .",
     "check:types": "tsc --noEmit --project tsconfig.json",
+    "fix": "npm run fix:lint && npm run reformat",
+    "fix:lint": "eslint . --fix",
     "reformat": "prettier --write .",
     "generate": "./scripts/generate.sh",
     "test": "vitest --project unit-and-integration --coverage",

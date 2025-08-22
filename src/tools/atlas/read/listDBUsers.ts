@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { AtlasToolBase } from "../atlasTool.js";
 import type { ToolArgs, OperationType } from "../../tool.js";
+import { formatUntrustedData } from "../../tool.js";
 import type { DatabaseUserRole, UserScope } from "../../../common/atlas/openapi.js";
 
 export class ListDBUsersTool extends AtlasToolBase {
@@ -22,7 +23,9 @@ export class ListDBUsersTool extends AtlasToolBase {
         });
 
         if (!data?.results?.length) {
-            throw new Error("No database users found.");
+            return {
+                content: [{ type: "text", text: " No database users found" }],
+            };
         }
 
         const output =
@@ -35,7 +38,7 @@ export class ListDBUsersTool extends AtlasToolBase {
                 })
                 .join("\n");
         return {
-            content: [{ type: "text", text: output }],
+            content: formatUntrustedData(`Found ${data.results.length} database users in project ${projectId}`, output),
         };
     }
 }

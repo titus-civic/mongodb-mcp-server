@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { AtlasToolBase } from "../atlasTool.js";
 import type { ToolArgs, OperationType } from "../../tool.js";
+import { formatUntrustedData } from "../../tool.js";
 
 export class ListAlertsTool extends AtlasToolBase {
     public name = "atlas-list-alerts";
@@ -39,7 +40,7 @@ export class ListAlertsTool extends AtlasToolBase {
                 .join("\n");
 
         return {
-            content: [{ type: "text", text: output }],
+            content: formatUntrustedData(`Found ${data.results.length} alerts in project ${projectId}`, output),
         };
     }
 }
