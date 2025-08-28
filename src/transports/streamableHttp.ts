@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { TransportRunnerBase } from "./base.js";
 import type { DriverOptions, UserConfig } from "../common/config.js";
+import type { LoggerBase } from "../common/logger.js";
 import { LogId } from "../common/logger.js";
 import { randomUUID } from "crypto";
 import { SessionStore } from "../common/sessionStore.js";
@@ -18,8 +19,20 @@ export class StreamableHttpRunner extends TransportRunnerBase {
     private httpServer: http.Server | undefined;
     private sessionStore!: SessionStore;
 
-    constructor(userConfig: UserConfig, driverOptions: DriverOptions) {
-        super(userConfig, driverOptions);
+    public get serverAddress(): string {
+        const result = this.httpServer?.address();
+        if (typeof result === "string") {
+            return result;
+        }
+        if (typeof result === "object" && result) {
+            return `http://${result.address}:${result.port}`;
+        }
+
+        throw new Error("Server is not started yet");
+    }
+
+    constructor(userConfig: UserConfig, driverOptions: DriverOptions, additionalLoggers: LoggerBase[] = []) {
+        super(userConfig, driverOptions, additionalLoggers);
     }
 
     async start(): Promise<void> {
@@ -32,6 +45,17 @@ export class StreamableHttpRunner extends TransportRunnerBase {
 
         app.enable("trust proxy"); // needed for reverse proxy support
         app.use(express.json());
+        app.use((req, res, next) => {
+            for (const [key, value] of Object.entries(this.userConfig.httpHeaders)) {
+                const header = req.headers[key.toLowerCase()];
+                if (!header || header !== value) {
+                    res.status(403).send({ error: `Invalid value for header "${key}"` });
+                    return;
+                }
+            }
+
+            next();
+        });
 
         const handleSessionRequest = async (req: express.Request, res: express.Response): Promise<void> => {
             const sessionId = req.headers["mcp-session-id"];
@@ -142,7 +166,7 @@ export class StreamableHttpRunner extends TransportRunnerBase {
         this.logger.info({
             id: LogId.streamableHttpTransportStarted,
             context: "streamableHttpTransport",
-            message: `Server started on http://${this.userConfig.httpHost}:${this.userConfig.httpPort}`,
+            message: `Server started on ${this.serverAddress}`,
             noRedaction: true,
         });
     }
