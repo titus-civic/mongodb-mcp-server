@@ -1,13 +1,13 @@
 import express from "express";
 import type http from "http";
+import { randomUUID } from "crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import { TransportRunnerBase } from "./base.js";
-import type { DriverOptions, UserConfig } from "../common/config.js";
-import type { LoggerBase } from "../common/logger.js";
-import { LogId } from "../common/logger.js";
-import { randomUUID } from "crypto";
+import { LogId, type LoggerBase } from "../common/logger.js";
+import { type UserConfig } from "../common/config.js";
 import { SessionStore } from "../common/sessionStore.js";
+import { TransportRunnerBase } from "./base.js";
+import { createMCPConnectionManager, type ConnectionManagerFactoryFn } from "../common/connectionManager.js";
 
 const JSON_RPC_ERROR_CODE_PROCESSING_REQUEST_FAILED = -32000;
 const JSON_RPC_ERROR_CODE_SESSION_ID_REQUIRED = -32001;
@@ -19,6 +19,14 @@ export class StreamableHttpRunner extends TransportRunnerBase {
     private httpServer: http.Server | undefined;
     private sessionStore!: SessionStore;
 
+    constructor(
+        userConfig: UserConfig,
+        createConnectionManager: ConnectionManagerFactoryFn = createMCPConnectionManager,
+        additionalLoggers: LoggerBase[] = []
+    ) {
+        super(userConfig, createConnectionManager, additionalLoggers);
+    }
+
     public get serverAddress(): string {
         const result = this.httpServer?.address();
         if (typeof result === "string") {
@@ -29,10 +37,6 @@ export class StreamableHttpRunner extends TransportRunnerBase {
         }
 
         throw new Error("Server is not started yet");
-    }
-
-    constructor(userConfig: UserConfig, driverOptions: DriverOptions, additionalLoggers: LoggerBase[] = []) {
-        super(userConfig, driverOptions, additionalLoggers);
     }
 
     async start(): Promise<void> {
@@ -113,7 +117,7 @@ export class StreamableHttpRunner extends TransportRunnerBase {
                     return;
                 }
 
-                const server = this.setupServer();
+                const server = await this.setupServer();
                 let keepAliveLoop: NodeJS.Timeout;
                 const transport = new StreamableHTTPServerTransport({
                     sessionIdGenerator: (): string => randomUUID().toString(),
