@@ -89,7 +89,7 @@ const OPTIONS = {
         "greedy-arrays": true,
         "short-option-groups": false,
     },
-};
+} as const;
 
 function isConnectionSpecifier(arg: string | undefined): boolean {
     return (
@@ -187,12 +187,19 @@ function getExportsPath(): string {
 // are prefixed with `MDB_MCP_` and the keys match the UserConfig keys, but are converted
 // to SNAKE_UPPER_CASE.
 function parseEnvConfig(env: Record<string, unknown>): Partial<UserConfig> {
+    const CONFIG_WITH_URLS: Set<string> = new Set<(typeof OPTIONS)["string"][number]>(["connectionString"]);
+
     function setValue(obj: Record<string, unknown>, path: string[], value: string): void {
         const currentField = path.shift();
         if (!currentField) {
             return;
         }
         if (path.length === 0) {
+            if (CONFIG_WITH_URLS.has(currentField)) {
+                obj[currentField] = value;
+                return;
+            }
+
             const numberValue = Number(value);
             if (!isNaN(numberValue)) {
                 obj[currentField] = numberValue;
@@ -249,7 +256,7 @@ function SNAKE_CASE_toCamelCase(str: string): string {
 // whatever is in mongosh.
 function parseCliConfig(args: string[]): CliOptions {
     const programArgs = args.slice(2);
-    const parsed = argv(programArgs, OPTIONS) as unknown as CliOptions &
+    const parsed = argv(programArgs, OPTIONS as unknown as argv.Options) as unknown as CliOptions &
         UserConfig & {
             _?: string[];
         };

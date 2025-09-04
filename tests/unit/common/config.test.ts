@@ -12,6 +12,20 @@ import type { Secret } from "../../../src/common/keychain.js";
 
 describe("config", () => {
     describe("env var parsing", () => {
+        describe("mongodb urls", () => {
+            it("should not try to parse a multiple-host urls", () => {
+                const actual = setupUserConfig({
+                    env: {
+                        MDB_MCP_CONNECTION_STRING: "mongodb://user:password@host1,host2,host3/",
+                    },
+                    cli: [],
+                    defaults: defaultUserConfig,
+                });
+
+                expect(actual.connectionString).toEqual("mongodb://user:password@host1,host2,host3/");
+            });
+        });
+
         describe("string cases", () => {
             const testCases = [
                 { envVar: "MDB_MCP_API_BASE_URL", property: "apiBaseUrl", value: "http://test.com" },
@@ -67,6 +81,16 @@ describe("config", () => {
     });
 
     describe("cli parsing", () => {
+        it("should not try to parse a multiple-host urls", () => {
+            const actual = setupUserConfig({
+                cli: ["myself", "--", "--connectionString", "mongodb://user:password@host1,host2,host3/"],
+                env: {},
+                defaults: defaultUserConfig,
+            });
+
+            expect(actual.connectionString).toEqual("mongodb://user:password@host1,host2,host3/");
+        });
+
         describe("string use cases", () => {
             const testCases = [
                 {
