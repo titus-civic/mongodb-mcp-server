@@ -9,7 +9,6 @@ import type { AtlasClusterConnectionInfo } from "../../../common/connectionManag
 import { getDefaultRoleFromConfig } from "../../../common/atlas/roles.js";
 import { AtlasArgs } from "../../args.js";
 
-const EXPIRY_MS = 1000 * 60 * 60 * 12; // 12 hours
 const addedIpAccessListMessage =
     "Note: Your current IP address has been added to the Atlas project's IP access list to enable secure connection.";
 
@@ -81,7 +80,7 @@ export class ConnectClusterTool extends AtlasToolBase {
         const username = `mcpUser${Math.floor(Math.random() * 100000)}`;
         const password = await generateSecurePassword();
 
-        const expiryDate = new Date(Date.now() + EXPIRY_MS);
+        const expiryDate = new Date(Date.now() + this.config.atlasTemporaryDatabaseUserLifetimeMs);
         const role = getDefaultRoleFromConfig(this.config);
 
         await this.session.apiClient.createDatabaseUser({
