@@ -49,6 +49,9 @@ const OPTIONS = {
         "tlsDisabledProtocols",
         "username",
         "atlasTemporaryDatabaseUserLifetimeMs",
+        "exportsPath",
+        "exportTimeoutMs",
+        "exportCleanupIntervalMs",
     ],
     boolean: [
         "apiDeprecationErrors",
@@ -72,7 +75,7 @@ const OPTIONS = {
         "tlsFIPSMode",
         "version",
     ],
-    array: ["disabledTools", "loggers"],
+    array: ["disabledTools", "loggers", "confirmationRequiredTools"],
     alias: {
         h: "help",
         p: "password",
@@ -358,7 +361,7 @@ export function warnAboutDeprecatedOrUnknownCliArgs(
     if (knownArgs.connectionString) {
         usedDeprecatedArgument = true;
         warn(
-            "The --connectionString argument is deprecated. Prefer using the first positional argument for the connection string or the MDB_MCP_CONNECTION_STRING environment variable."
+            "The --connectionString argument is deprecated. Prefer using the MDB_MCP_CONNECTION_STRING environment variable or the first positional argument for the connection string."
         );
     }
 
